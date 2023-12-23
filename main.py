@@ -70,16 +70,13 @@ def replace_numbers_with_asterisks(my_list):
     chek_state= 0
     for item in my_list:
         if chek_state == 0 and "." not in item  and "ФЗ"  not in item or (is_valid_date_format(item) and chek_ot == 0) or is_valid_home_format(item) or is_valid_cost_format(item):
-            modified_item = ''.join('*' if c.isdigit() & c.isdigit() else c for c in item)
+            result_list.append(item)
             if chek_cite_street == 1:
-                modified_item = "*****"
-            result_list.append(modified_item)
+                result_list.append(item)
         else:
             if "@"  in item or "https://"  in item:
-                modified_item = "*****"
-                result_list.append(modified_item)
-            else:
                 result_list.append(item)
+
         if (item == "от" and chek_front_ot_zak == 1) or (item == "от" and chek_front_ot_fz == 1):
             chek_ot = 1
         else:
@@ -184,6 +181,7 @@ if __name__ == '__main__':
     # text_first = read_string_from_file(file_path)
     # text_second = text_first.split()
     modified_list = replace_numbers_with_asterisks(List)
+    print(modified_list)
     text = ", ".join(modified_list)
     doc = Doc(text)
     doc.segment(segmenter)
@@ -201,7 +199,7 @@ if __name__ == '__main__':
     text_end = " ".join(str(item) for item in result_list)
     save_string_to_file("text_del.txt", text_end)
 
-    create_rectangles(image_path, modified_list ,result_list ,ListCoordinate)
+    create_rectangles(image_path, List ,result_list ,ListCoordinate)
 
     # print(modified_list)
     # replace_elements_with_asterisks(modified_list, result_list)
