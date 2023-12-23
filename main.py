@@ -16,7 +16,38 @@ from PIL import Image, ImageDraw
 import easyocr
 import os
 from pdf2docx import Converter
+from docx import Document
 
+def string_to_list(input_string):
+    words_list = input_string.split()
+    return words_list
+def list_to_string(input_list):
+    result_string = ' '.join(map(str, input_list))
+    return result_string
+def replace_letters_on_match(list1, list2):
+    result_list = []
+
+    for item1 in list1:
+        for item2 in list2:
+            if item1 == item2:
+                replaced_item = '*' * len(item1)
+                result_list.append(replaced_item)
+                break
+        else:
+            result_list.append(item1)
+
+    return result_list
+def read_docx(file_path):
+    doc = Document(file_path)
+    text_elements = [paragraph.text for paragraph in doc.paragraphs]
+    return text_elements
+
+def modify_and_save_docx(file_path, modified_elements):
+    doc = Document()
+    for element in modified_elements:
+        doc.add_paragraph(element)
+
+    doc.save(file_path)
 
 
 def text_ai(List, result_list, ListExeption, ListADD):
@@ -216,6 +247,77 @@ def rotate_image_180(image_path):
     rotated_img = img.rotate(180)
     # Сохраняем результат
     rotated_img.save(image_path)
+def list_ai(my_list, result_list, ListExeption, ListADD):
+    for item in my_list:
+        item_list = string_to_list(item)
+        temp_list = []  # Создаем временный список для каждого элемента item
+
+        segmenter = Segmenter()
+        morph_vocab = MorphVocab()
+        emb = NewsEmbedding()
+
+        morph_tagger = NewsMorphTagger(emb)
+        syntax_parser = NewsSyntaxParser(emb)
+        ner_tagger = NewsNERTagger(emb)
+        names_extractor = NamesExtractor(morph_vocab)
+        text = ", ".join(capitalize_first_letter_in_all(item_list))
+        doc = Doc(text)
+        doc.segment(segmenter)
+        doc.tag_morph(morph_tagger)
+        doc.parse_syntax(syntax_parser)
+        doc.tag_ner(ner_tagger)
+        for span in doc.spans:
+            if span.type == PER:
+                temp_list.append(span.text)  # Добавляем элемент во временный список
+            if span.type == LOC:
+                temp_list.append(span.text)  # Добавляем элемент во временный список
+        modified_list = find_missing_elements(replace_numbers_with_asterisks(item_list), item_list)
+        temp_list = ListExeption + filter_unique_elements(item_list, temp_list) + modified_list
+        temp_list = remove_duplicates(temp_list, ListExeption)
+        temp_list = ListADD + temp_list
+
+        result_list += temp_list  # Объединяем временный список с основным result_list
+
+    return result_list
+
+
+def analyze_and_replace(original_elements, ListExeption, ListADD):
+    result_list = list_ai(original_elements, [], ListExeption, ListADD)
+
+    for i in range(len(original_elements)):
+        item_list = string_to_list(original_elements[i])
+        temp_list = []  # Создаем временный список для каждого элемента
+
+        segmenter = Segmenter()
+        morph_vocab = MorphVocab()
+        emb = NewsEmbedding()
+
+        morph_tagger = NewsMorphTagger(emb)
+        syntax_parser = NewsSyntaxParser(emb)
+        ner_tagger = NewsNERTagger(emb)
+        names_extractor = NamesExtractor(morph_vocab)
+        text = ", ".join(capitalize_first_letter_in_all(item_list))
+        doc = Doc(text)
+        doc.segment(segmenter)
+        doc.tag_morph(morph_tagger)
+        doc.parse_syntax(syntax_parser)
+        doc.tag_ner(ner_tagger)
+        for span in doc.spans:
+            if span.type == PER:
+                temp_list.append(span.text)  # Добавляем элемент во временный список
+            if span.type == LOC:
+                temp_list.append(span.text)  # Добавляем элемент во временный список
+        modified_list = find_missing_elements(replace_numbers_with_asterisks(item_list), item_list)
+        temp_list = ListExeption + filter_unique_elements(item_list, temp_list) + modified_list
+        temp_list = remove_duplicates(temp_list, ListExeption)
+        temp_list = ListADD + temp_list
+
+        # Заменяем элементы, содержащие 'замена', на '*'
+        result = replace_letters_on_match([original_elements[i]], temp_list)
+        original_elements[i] = result[0]
+
+    return original_elements
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -228,12 +330,15 @@ if __name__ == '__main__':
 
     files = os.listdir(directory_path)
     file_path = files[0]
+    file_path = os.path.abspath(os.path.join(directory_path, file_path))
     print(f'Имя файла: {file_path}')
     if not os.path.isfile(file_path):
         print(f'Файл не найден: {file_path}')
 
     # Проверяем разрешение по пути
     _, extension = os.path.splitext(file_path)
+
+
 
     if extension.lower() == '.pdf':
         # Если файл PDF, конвертируем его в DOCX
@@ -242,6 +347,17 @@ if __name__ == '__main__':
         cv.convert(docx_path, start=0, end=None)
         cv.close()
         print(f'Конвертация успешно завершена: {file_path} -> {docx_path}')
+        original_elements = read_docx(docx_path)
+        result = analyze_and_replace(original_elements, ListExeption, ListADD)
+        # result_list = list_ai(original_elements, result_list, ListExeption, ListADD)
+        # Алгоритм модификации списка original_elements
+        # Заменяем элементы, содержащие 'замена', на '*'
+        # result = replace_letters_on_match(original_elements, result_list)
+        # print(result_list)
+        print(result)
+        # Сохраняем измененный список обратно в файл
+        modify_and_save_docx(docx_path, result)
+
     else:
         print(f'Файл не является PDF: {file_path}')
 
