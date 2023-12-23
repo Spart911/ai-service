@@ -14,7 +14,36 @@ from natasha import (
 import re
 from PIL import Image, ImageDraw
 import easyocr
+import os
+from pdf2docx import Converter
 
+
+
+def text_ai(List, result_list, ListExeption, ListADD):
+    segmenter = Segmenter()
+    morph_vocab = MorphVocab()
+    emb = NewsEmbedding()
+
+    morph_tagger = NewsMorphTagger(emb)
+    syntax_parser = NewsSyntaxParser(emb)
+    ner_tagger = NewsNERTagger(emb)
+    names_extractor = NamesExtractor(morph_vocab)
+    text = ", ".join(capitalize_first_letter_in_all(List))
+    doc = Doc(text)
+    doc.segment(segmenter)
+    doc.tag_morph(morph_tagger)
+    doc.parse_syntax(syntax_parser)
+    doc.tag_ner(ner_tagger)
+    for span in doc.spans:
+        if span.type == PER:
+            result_list.append(span.text)
+        if span.type == LOC:
+            result_list.append(span.text)
+    modified_list = find_missing_elements(replace_numbers_with_asterisks(List), List)
+    result_list = ListExeption + filter_unique_elements(List, result_list) + modified_list
+    result_list = remove_duplicates(result_list, ListExeption)
+    result_list = ListADD + result_list
+    return result_list
 def filter_unique_elements(list1, list2):
     # Приводим элементы второго списка к нижнему регистру
     lower_list2 = [item.lower() for item in list2]
@@ -168,7 +197,7 @@ def create_rectangles(image_path, result, words_to_hide, ListCoordinate):
             draw.rectangle([x0, y0, x1, y1], fill="black")
 
     # Save the image with hidden words outside the loop
-    img.save("output_image.jpg")
+    img.save(image_path)
 
 
 def extract_text_from_image(image_path, List, ListCoordinate, languages=['en','ru']):
@@ -180,55 +209,61 @@ def extract_text_from_image(image_path, List, ListCoordinate, languages=['en','r
     for detection in result:
         List.append(detection[1])
         ListCoordinate.append(detection[0])
-
+def rotate_image_180(image_path):
+    # Открываем изображение
+    img = Image.open(image_path)
+    # Поворачиваем изображение на 180 градусов
+    rotated_img = img.rotate(180)
+    # Сохраняем результат
+    rotated_img.save(image_path)
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    ListCoordinate = []
-    file_path = 'text_file.txt'
-    # Path to the image
-    image_path = 'test.jpg'
     file_path_exeption = 'exeption.txt'
+    directory_path = './../output'
     List = []
     result_list = []
     ListADD = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря", "мужской", "женский", "Мужской", "Женский"]
     ListExeption = read_and_create_list(file_path_exeption)
-    index = 0
-    extract_text_from_image(image_path, List ,ListCoordinate)
+
+    files = os.listdir(directory_path)
+    file_path = files[0]
+    print(f'Имя файла: {file_path}')
+    if not os.path.isfile(file_path):
+        print(f'Файл не найден: {file_path}')
+
+    # Проверяем разрешение по пути
+    _, extension = os.path.splitext(file_path)
+
+    if extension.lower() == '.pdf':
+        # Если файл PDF, конвертируем его в DOCX
+        docx_path = os.path.splitext(file_path)[0] + '.docx'
+        cv = Converter(file_path)
+        cv.convert(docx_path, start=0, end=None)
+        cv.close()
+        print(f'Конвертация успешно завершена: {file_path} -> {docx_path}')
+    else:
+        print(f'Файл не является PDF: {file_path}')
+
+
+    # Для изображений
+    # ListCoordinate = []
+    # image_path = 'test.jpg'
+    # extract_text_from_image(image_path, List, ListCoordinate)
+    # create_rectangles(image_path, List, text_ai(List, result_list, ListExeption, ListADD), ListCoordinate)
+    # rotate_image_180(image_path)
+    # List.clear()
+    # result_list.clear()
 
 
 
 
-    segmenter = Segmenter()
-    morph_vocab = MorphVocab()
-    emb = NewsEmbedding()
 
-    morph_tagger = NewsMorphTagger(emb)
-    syntax_parser = NewsSyntaxParser(emb)
-    ner_tagger = NewsNERTagger(emb)
 
-    names_extractor = NamesExtractor(morph_vocab)
 
-    # text_first = read_string_from_file(file_path)
-    # text_second = text_first.split()
-    text = ", ".join(capitalize_first_letter_in_all(List))
-    doc = Doc(text)
-    doc.segment(segmenter)
-    doc.tag_morph(morph_tagger)
-    doc.parse_syntax(syntax_parser)
-    doc.tag_ner(ner_tagger)
-    for span in doc.spans:
-        if span.type == PER:
-            result_list.append(span.text)
-        if span.type == LOC:
-            result_list.append(span.text)
-    modified_list = find_missing_elements(replace_numbers_with_asterisks(List), List)
-    result_list = ListExeption + filter_unique_elements(List, result_list) + modified_list
-    result_list = remove_duplicates(result_list, ListExeption)
-    result_list = ListADD + result_list
     # text_end = " ".join(str(item) for item in result_list)
     # save_string_to_file("text_del.txt", text_end)
-    create_rectangles(image_path, List ,result_list ,ListCoordinate)
+
 
     # print(modified_list)
     # replace_elements_with_asterisks(modified_list, result_list)
