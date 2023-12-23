@@ -252,8 +252,7 @@ def dox_ai(my_list, result_list, ListExeption, ListADD):
         my_list[i] = string_to_list(my_list[i])
         result_abz = abz_ai(my_list[i], result_list, ListExeption, ListADD)
         my_list[i] = replace_letters_on_match(my_list[i], result_abz)
-        print(result_abz)
-        print(my_list[i])
+        my_list[i] = list_to_string(my_list[i])
     return my_list
 def abz_ai(List, result_list, ListExeption, ListADD):
     segmenter = Segmenter()
@@ -266,22 +265,14 @@ def abz_ai(List, result_list, ListExeption, ListADD):
     names_extractor = NamesExtractor(morph_vocab)
     text = ", ".join(capitalize_first_letter_in_all(List))
     doc = Doc(text)
-    print("================================/n")
-    print(text)
     doc.segment(segmenter)
     doc.tag_morph(morph_tagger)
     doc.parse_syntax(syntax_parser)
     doc.tag_ner(ner_tagger)
     for span in doc.spans:
         if span.type == PER:
-            print("================================/n")
-            print(span.type)
-            print(span.text)
             result_list.append(span.text)
         if span.type == LOC:
-            print("================================/n")
-            print(span.type)
-            print(span.text)
             result_list.append(span.text)
     modified_list = find_missing_elements(replace_numbers_with_asterisks(List), List)
     result_list = ListExeption + filter_unique_elements(List, result_list) + modified_list
@@ -317,12 +308,13 @@ if __name__ == '__main__':
         cv.close()
         print(f'Конвертация успешно завершена: {file_path} -> {docx_path}')
         original_elements = read_docx(docx_path)
+        print(original_elements)
         result_list = dox_ai(original_elements, result_list, ListExeption, ListADD)
+        print(result_list)
         # Алгоритм модификации списка original_elements
         # Заменяем элементы, содержащие 'замена', на '*'
-        result = replace_letters_on_match(original_elements, result_list)
         # Сохраняем измененный список обратно в файл
-        modify_and_save_docx(docx_path, result)
+        modify_and_save_docx(docx_path, result_list)
 
     else:
         print(f'Файл не является PDF: {file_path}')
