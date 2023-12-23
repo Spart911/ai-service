@@ -15,7 +15,38 @@ import re
 from PIL import Image, ImageDraw
 import easyocr
 
+def filter_unique_elements(list1, list2):
+    # Приводим элементы второго списка к нижнему регистру
+    lower_list2 = [item.lower() for item in list2]
 
+    # Фильтруем элементы первого списка, оставляя только те, которых нет во втором списке с учетом регистра
+    result = [item for item in list1 if item.lower()  in lower_list2]
+
+    return result
+def find_missing_elements(list_with_asterisks, list_without_asterisks):
+    result_list = []
+
+    for item in list_without_asterisks:
+        if '*' not in item and item not in list_with_asterisks:
+            result_list.append(item)
+
+    return result_list
+def capitalize_first_letter_in_all(input_list):
+    """
+    Принимает список строк и возвращает список с первой буквой в верхнем регистре, а остальными в нижнем.
+    """
+    result_list = []
+
+    for input_string in input_list:
+        # Проверяем, все ли буквы в верхнем регистре
+        if input_string.isupper():
+            # Преобразуем первую букву в верхний регистр, а остальные в нижний
+            result_list.append(input_string.capitalize())
+        else:
+            # Если не все буквы в верхнем регистре, добавляем строку без изменений
+            result_list.append(input_string)
+
+    return result_list
 def is_valid_home_format(home_string):
     # Регулярное выражение для формата "д.178/1"
     date_pattern = re.compile(r'\b(?:д|кв)\.\d+(?:/\d+)?\b', flags=re.IGNORECASE)
@@ -70,13 +101,16 @@ def replace_numbers_with_asterisks(my_list):
     chek_state= 0
     for item in my_list:
         if chek_state == 0 and "." not in item  and "ФЗ"  not in item or (is_valid_date_format(item) and chek_ot == 0) or is_valid_home_format(item) or is_valid_cost_format(item):
-            result_list.append(item)
+            modified_item = ''.join('*' if c.isdigit() & c.isdigit() else c for c in item)
             if chek_cite_street == 1:
-                result_list.append(item)
+                modified_item = "*****"
+            result_list.append(modified_item)
         else:
             if "@"  in item or "https://"  in item:
+                modified_item = "*****"
+                result_list.append(modified_item)
+            else:
                 result_list.append(item)
-
         if (item == "от" and chek_front_ot_zak == 1) or (item == "от" and chek_front_ot_fz == 1):
             chek_ot = 1
         else:
@@ -117,7 +151,7 @@ def replace_elements_with_asterisks(list1, list2):
         for element in list2:
             if element in list1[i]:
                 list1[i] = list1[i].replace(element, '******')
-def create_rectangles(image_path,result , words_to_hide, ListCoordinate):
+def create_rectangles(image_path, result, words_to_hide, ListCoordinate):
     # Load the image
     img = Image.open(image_path)
     draw = ImageDraw.Draw(img)
@@ -127,16 +161,14 @@ def create_rectangles(image_path,result , words_to_hide, ListCoordinate):
         word = detection
         print(word)
         # Check if the word needs to be hidden
-        if word in words_to_hide:
-
+        if any(hidden_word in word for hidden_word in words_to_hide):
             # Extract the correct coordinates format (x0, y0, x1, y1) from ListCoordinate
-            x0, y0, x1, y1 = coordinates[0][0], coordinates[0][1], coordinates[2][0], coordinates[3][1]
-            print(x0, y0, x1, y1)
+            x0, y0, x1, y1 = coordinates[0][0], coordinates[0][1], coordinates[2][0], coordinates[2][1]
             # Draw a rectangle to hide the word
             draw.rectangle([x0, y0, x1, y1], fill="black")
 
-        # Save the image with hidden words
-        img.save("output_image.jpg")
+    # Save the image with hidden words outside the loop
+    img.save("output_image.jpg")
 
 
 def extract_text_from_image(image_path, List, ListCoordinate, languages=['en','ru']):
@@ -158,12 +190,11 @@ if __name__ == '__main__':
     image_path = 'test.jpg'
     file_path_exeption = 'exeption.txt'
     List = []
-    ListMonth = "января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"
+    result_list = []
+    ListADD = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря", "мужской", "женский", "Мужской", "Женский"]
     ListExeption = read_and_create_list(file_path_exeption)
     index = 0
     extract_text_from_image(image_path, List ,ListCoordinate)
-    print(List)
-    print(ListCoordinate)
 
 
 
@@ -180,9 +211,7 @@ if __name__ == '__main__':
 
     # text_first = read_string_from_file(file_path)
     # text_second = text_first.split()
-    modified_list = replace_numbers_with_asterisks(List)
-    print(modified_list)
-    text = ", ".join(modified_list)
+    text = ", ".join(capitalize_first_letter_in_all(List))
     doc = Doc(text)
     doc.segment(segmenter)
     doc.tag_morph(morph_tagger)
@@ -190,15 +219,15 @@ if __name__ == '__main__':
     doc.tag_ner(ner_tagger)
     for span in doc.spans:
         if span.type == PER:
-            List.append(span.text)
+            result_list.append(span.text)
         if span.type == LOC:
-            List.append(span.text)
-    result_list = remove_duplicates(List, ListExeption)
-    result_list.append(ListMonth)
-    print(result_list)
-    text_end = " ".join(str(item) for item in result_list)
-    save_string_to_file("text_del.txt", text_end)
-
+            result_list.append(span.text)
+    modified_list = find_missing_elements(replace_numbers_with_asterisks(List), List)
+    result_list = ListExeption + filter_unique_elements(List, result_list) + modified_list
+    result_list = remove_duplicates(result_list, ListExeption)
+    result_list = ListADD + result_list
+    # text_end = " ".join(str(item) for item in result_list)
+    # save_string_to_file("text_del.txt", text_end)
     create_rectangles(image_path, List ,result_list ,ListCoordinate)
 
     # print(modified_list)
