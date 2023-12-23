@@ -251,6 +251,7 @@ def dox_ai(my_list, result_list, ListExeption, ListADD):
     for i in range(len(my_list)):
         my_list[i] = string_to_list(my_list[i])
         result_abz = abz_ai(my_list[i], result_list, ListExeption, ListADD)
+        my_list[i] = replace_letters_on_match(my_list[i], result_abz)
         print(result_abz)
         print(my_list[i])
     return my_list
@@ -286,7 +287,7 @@ def abz_ai(List, result_list, ListExeption, ListADD):
     result_list = ListExeption + filter_unique_elements(List, result_list) + modified_list
     result_list = remove_duplicates(result_list, ListExeption)
     result_list = ListADD + result_list
-    return list_to_string(result_list)
+    return result_list
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     file_path_exeption = 'exeption.txt'
