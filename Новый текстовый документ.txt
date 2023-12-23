@@ -120,23 +120,32 @@ def replace_elements_with_asterisks(list1, list2):
         for element in list2:
             if element in list1[i]:
                 list1[i] = list1[i].replace(element, '******')
-def create_rectangles(image_path,result , words_to_hide, ListCoordinate):
-    # Load the image
+def create_rectangles(image_path, words_to_hide, extracted_text, ListCoordinate):
+    # words_to_hide - то что вычесть
+    # extracted_text - откуда вычесть
     img = Image.open(image_path)
     draw = ImageDraw.Draw(img)
 
-    # Iterate through each word and check if it needs to be hidden
-    for detection, coordinates in zip(result, ListCoordinate):
+    for i, detection in enumerate(extracted_text):
         word = detection
         print(word)
-        # Check if the word needs to be hidden
-        if word in words_to_hide:
+        if i < len(ListCoordinate):
+            coordinates = ListCoordinate[i]
 
-            # Extract the correct coordinates format (x0, y0, x1, y1) from ListCoordinate
-            x0, y0, x1, y1 = coordinates[0][0], coordinates[0][1], coordinates[2][0], coordinates[3][1]
-            print(x0, y0, x1, y1)
-            # Draw a rectangle to hide the word
-            draw.rectangle([x0, y0, x1, y1], fill="black")
+            # Проверка на корректность координат
+            if len(coordinates) == 4:  # убедитесь, что координаты представляют собой четыре точки (x0, y0, x1, y1)
+                x0, y0 = coordinates[0]
+                x1, y1 = coordinates[2]
+                # Проверка на корректность границ
+                if y1 >= y0:
+                    # Рисование прямоугольника
+                    draw.rectangle([x0, y0, x1, y1], fill="black")
+                else:
+                    print("Ошибка: y1 должно быть больше или равно y0")
+            else:
+                print("Ошибка: Некорректные координаты")
+        else:
+            print("Ошибка: Недостаточно координат для всех слов")
 
         # Save the image with hidden words
         img.save("output_image.jpg")
@@ -151,8 +160,9 @@ def extract_text_from_image(image_path, List, ListCoordinate, languages=['en','r
     for detection in result:
         List.append(detection[1])
         ListCoordinate.append(detection[0])
+    return result
 
-
+    return extracted_text
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     ListCoordinate = []
@@ -161,12 +171,11 @@ if __name__ == '__main__':
     image_path = 'test.jpg'
     file_path_exeption = 'exeption.txt'
     List = []
-    ListMonth = "января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"
+    ListMonth = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
     ListExeption = read_and_create_list(file_path_exeption)
     index = 0
-    extract_text_from_image(image_path, List ,ListCoordinate)
+    extract_text_from_image(image_path, List, ListCoordinate)
     print(List)
-    print(ListCoordinate)
 
 
 
@@ -193,15 +202,17 @@ if __name__ == '__main__':
     for span in doc.spans:
         if span.type == PER:
             List.append(span.text)
+            print("Персонаж: ",span.text)
         if span.type == LOC:
             List.append(span.text)
+            print("Адрес: ",span.text)
+
     result_list = remove_duplicates(List, ListExeption)
     result_list.append(ListMonth)
-    print(result_list)
     text_end = " ".join(str(item) for item in result_list)
     save_string_to_file("text_del.txt", text_end)
 
-    create_rectangles(image_path, modified_list ,result_list ,ListCoordinate)
+    create_rectangles(image_path, result_list, modified_list, ListCoordinate)
 
     # print(modified_list)
     # replace_elements_with_asterisks(modified_list, result_list)
