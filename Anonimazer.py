@@ -1,6 +1,6 @@
 import shutil
 import sys
-
+from docx2pdf import convert
 # -*- coding: utf-8 -*-
 from natasha import (
     Segmenter,
@@ -19,6 +19,26 @@ import easyocr
 import os
 from pdf2docx import Converter
 from docx import Document
+
+
+
+
+def modify_docx_and_save_pdf(file_path, modified_elements, output_path):
+    doc = Document()
+    for element in modified_elements:
+        doc.add_paragraph(element)
+
+    # Сохраняем модифицированный DOCX в начальной папке
+    doc.save(file_path)
+
+    # Преобразуем модифицированный DOCX в PDF в начальной папке
+    pdf_path = os.path.splitext(output_path)[0] + '.pdf'
+    convert(file_path, pdf_path)
+
+    # Перемещаем PDF в папку output
+    output_pdf_path = os.path.join('output', os.path.basename(pdf_path))
+    shutil.move(pdf_path, output_pdf_path)
+
 
 def string_to_list(input_string):
     words_list = input_string.split()
@@ -45,11 +65,50 @@ def read_docx(file_path):
     return text_elements
 
 def modify_and_save_docx(file_path, modified_elements):
+    def modify_and_save_docx(file_path, modified_elements):
+        # Создаем новый путь для DOCX
+        docx_path = os.path.splitext(file_path)[0] + '_modified.docx'
+
+        doc = Document()
+        for element in modified_elements:
+            doc.add_paragraph(element)
+
+        # Сохраняем модифицированный DOCX
+        doc.save(docx_path)
+
+        # Преобразуем модифицированный DOCX в PDF
+        pdf_path = os.path.splitext(file_path)[0] + '_modified.pdf'
+        convert(docx_path, pdf_path)
+
+        # Удаляем файл DOCX после конвертации в PDF
+        os.remove(docx_path)
+
+        print(f'Модификация и сохранение успешно завершены: {file_path} -> {pdf_path}')
+def modify_and_save_docx_docx(file_path, modified_elements):
     doc = Document()
     for element in modified_elements:
         doc.add_paragraph(element)
 
     doc.save(file_path)
+def modify_and_save_docx_pdf(file_path, modified_elements):
+    # Создаем новый путь для DOCX
+    docx_path = os.path.splitext(file_path)[0] + '_modified.docx'
+
+    doc = Document()
+    for element in modified_elements:
+        doc.add_paragraph(element)
+
+    # Сохраняем модифицированный DOCX
+    doc.save(docx_path)
+
+    # Преобразуем модифицированный DOCX в PDF
+    pdf_path = os.path.splitext(file_path)[0] + '_modified.pdf'
+    convert(docx_path, pdf_path)
+
+    # Удаляем файл DOCX после конвертации в PDF
+    os.remove(docx_path)
+
+    print(f'Модификация и сохранение успешно завершены: {file_path} -> {pdf_path}')
 
 
 def text_ai(List, result_list, ListExeption, ListADD):
@@ -319,18 +378,29 @@ if __name__ == '__main__':
     if extension.lower() == '.pdf':
         # Если файл PDF, конвертируем его в DOCX
         docx_path = os.path.join(end_path, os.path.splitext(name_file)[0] + '.docx')
+        pdf_path = os.path.join(end_path, os.path.splitext(name_file)[0] + '.pdf')
+
+        # Используем pdf2docx для конвертации PDF в DOCX
         cv = Converter(file_path)
         cv.convert(docx_path, start=0, end=None)
         cv.close()
         print(f'Конвертация успешно завершена: {file_path} -> {docx_path}')
+
+        # Читаем текст из конвертированного DOCX
         original_elements = read_docx(docx_path)
-        print(original_elements)
+
+        # Ваш алгоритм модификации списка original_elements
         result_list = dox_ai(original_elements, result_list, ListExeption, ListADD)
-        print(result_list)
-        # Алгоритм модификации списка original_elements
-        # Заменяем элементы, содержащие 'замена', на '*'
-        # Сохраняем измененный список обратно в файл
-        modify_and_save_docx(docx_path, result_list)
+
+        # Создаем новый документ DOCX и сохраняем в него модифицированный текст
+        modify_and_save_docx_pdf(docx_path, result_list)
+
+        # Конвертируем DOCX в PDF
+        convert(docx_path, pdf_path)
+
+        # Опционально, удалите файл DOCX после конвертации в PDF
+        os.remove(docx_path)
+
 
     elif extension.lower() in ['.png', '.jpg', '.jpeg']:
         ListCoordinate = []
@@ -347,7 +417,7 @@ if __name__ == '__main__':
         docx_path = os.path.join(end_path, name_file)
         original_elements = read_docx(file_path)
         result_list = dox_ai(original_elements, result_list, ListExeption, ListADD)
-        modify_and_save_docx(docx_path, result_list)
+        modify_and_save_docx_docx(docx_path, result_list)
         os.remove(file_path)
     else:
         print(f'Неподдерживаемый формат файла: {file_path}')
