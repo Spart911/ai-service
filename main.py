@@ -349,20 +349,5 @@ if __name__ == '__main__':
 
 
 
-    # text_end = " ".join(str(item) for item in result_list)
-    # save_string_to_file("text_del.txt", text_end)
-
-
-    # print(modified_list)
-    # replace_elements_with_asterisks(modified_list, result_list)
-    # print(modified_list)
-    # text_end = " ".join(modified_list)
-    # save_string_to_file(file_path, text_end)
-
-
-
-
-
-
 
 
