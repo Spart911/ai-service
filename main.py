@@ -335,8 +335,7 @@ if __name__ == '__main__':
         # rotate_image_90(end_image_path)
 
 
-
-    elif extension.lower() == '.docx':
+    elif extension.lower() in ['.doc', '.docx']:
         docx_path = os.path.join(end_path, name_file)
         original_elements = read_docx(file_path)
         result_list = dox_ai(original_elements, result_list, ListExeption, ListADD)
