@@ -301,11 +301,17 @@ if __name__ == '__main__':
     ListExeption = read_and_create_list(file_path_exeption)
 
     files = os.listdir(directory_path)
-    file_path = files[0]
+    if not files:
+        print(f'В каталоге {directory_path} нет файлов.')
+        sys.exit()
+    else:
+        file_path = os.path.abspath(os.path.join(directory_path, files[0]))
+        print(f'Имя файла: {file_path}')
     file_path = os.path.abspath(os.path.join(directory_path, file_path))
     print(f'Имя файла: {file_path}')
     if not os.path.isfile(file_path):
         print(f'Файл не найден: {file_path}')
+        sys.exit()
     name_file = os.path.basename(file_path)
     # Проверяем разрешение по пути
     _, extension = os.path.splitext(file_path)
@@ -345,6 +351,7 @@ if __name__ == '__main__':
         os.remove(file_path)
     else:
         print(f'Неподдерживаемый формат файла: {file_path}')
+        sys.exit()
     sys.exit()
 
 
