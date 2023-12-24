@@ -1,4 +1,4 @@
-
+import shutil
 # -*- coding: utf-8 -*-
 from natasha import (
     Segmenter,
@@ -219,7 +219,6 @@ def create_rectangles(image_path, result, words_to_hide, ListCoordinate):
     # Iterate through each word and check if it needs to be hidden
     for detection, coordinates in zip(result, ListCoordinate):
         word = detection
-        print(word)
         # Check if the word needs to be hidden
         if any(hidden_word in word for hidden_word in words_to_hide):
             # Extract the correct coordinates format (x0, y0, x1, y1) from ListCoordinate
@@ -240,11 +239,20 @@ def extract_text_from_image(image_path, List, ListCoordinate, languages=['en','r
     for detection in result:
         List.append(detection[1])
         ListCoordinate.append(detection[0])
-def rotate_image_180(image_path):
+
+def move_file(source_path, destination_path):
+    try:
+        shutil.move(source_path, destination_path)
+        print(f'Файл успешно перемещен из {source_path} в {destination_path}')
+        return destination_path
+    except Exception as e:
+        print(f'Ошибка при перемещении файла: {e}')
+        return None
+def rotate_image_90(image_path):
     # Открываем изображение
     img = Image.open(image_path)
-    # Поворачиваем изображение на 180 градусов
-    rotated_img = img.rotate(180)
+    # Поворачиваем изображение на 90 градусов
+    rotated_img = img.rotate(90)
     # Сохраняем результат
     rotated_img.save(image_path)
 def dox_ai(my_list, result_list, ListExeption, ListADD):
@@ -282,10 +290,12 @@ def abz_ai(List, result_list, ListExeption, ListADD):
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     file_path_exeption = 'exeption.txt'
-    directory_path = './../output'
+    directory_path = './../input'
+    end_path = './../output/'
     List = []
     result_list = []
-    ListADD = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря", "мужской", "женский", "Мужской", "Женский"]
+    ListADD = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября",
+               "ноября", "декабря", "мужской", "женский", "Мужской", "Женский"]
     ListExeption = read_and_create_list(file_path_exeption)
 
     files = os.listdir(directory_path)
@@ -294,15 +304,13 @@ if __name__ == '__main__':
     print(f'Имя файла: {file_path}')
     if not os.path.isfile(file_path):
         print(f'Файл не найден: {file_path}')
-
+    name_file = os.path.basename(file_path)
     # Проверяем разрешение по пути
     _, extension = os.path.splitext(file_path)
 
-
-
     if extension.lower() == '.pdf':
         # Если файл PDF, конвертируем его в DOCX
-        docx_path = os.path.splitext(file_path)[0] + '.docx'
+        docx_path = os.path.join(end_path, os.path.splitext(name_file)[0] + '.docx')
         cv = Converter(file_path)
         cv.convert(docx_path, start=0, end=None)
         cv.close()
@@ -316,19 +324,26 @@ if __name__ == '__main__':
         # Сохраняем измененный список обратно в файл
         modify_and_save_docx(docx_path, result_list)
 
+    elif extension.lower() in ['.png', '.jpg', '.jpeg']:
+        ListCoordinate = []
+        image_path = os.path.join(directory_path, name_file)
+        end_image_path = os.path.join(end_path, name_file)
+        extract_text_from_image(image_path, List, ListCoordinate)
+        result_list = text_ai(List, result_list, ListExeption, ListADD)
+        create_rectangles(image_path, List, result_list, ListCoordinate)
+        image_path = move_file(image_path, end_image_path)
+        # rotate_image_90(end_image_path)
+
+
+
+    elif extension.lower() == '.docx':
+        docx_path = os.path.join(end_path, name_file)
+        original_elements = read_docx(file_path)
+        result_list = dox_ai(original_elements, result_list, ListExeption, ListADD)
+        modify_and_save_docx(docx_path, result_list)
+        os.remove(file_path)
     else:
-        print(f'Файл не является PDF: {file_path}')
-
-
-    # Для изображений
-    # ListCoordinate = []
-    # image_path = 'test.jpg'
-    # extract_text_from_image(image_path, List, ListCoordinate)
-    # create_rectangles(image_path, List, text_ai(List, result_list, ListExeption, ListADD), ListCoordinate)
-    # rotate_image_180(image_path)
-    # List.clear()
-    # result_list.clear()
-
+        print(f'Неподдерживаемый формат файла: {file_path}')
 
 
 
