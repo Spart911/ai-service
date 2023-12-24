@@ -1,4 +1,6 @@
 import shutil
+import sys
+
 # -*- coding: utf-8 -*-
 from natasha import (
     Segmenter,
@@ -343,10 +345,7 @@ if __name__ == '__main__':
         os.remove(file_path)
     else:
         print(f'Неподдерживаемый формат файла: {file_path}')
-
-
-
-
+    sys.exit()
 
 
 
